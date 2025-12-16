@@ -11,6 +11,61 @@ import { renderDiamond } from './diamond'
 
 import { getCentroidFromRegularShape, rotate } from './shapeUtils'
 
+const DARK_BACKGROUND = '#121212'
+const LIGHT_BACKGROUND = '#ffffff'
+
+// Inverts a color for dark mode (primarily handles black -> white and vice versa)
+const invertColorForDarkMode = (color) => {
+    if (!color || color === 'transparent') return color
+
+    // Convert named colors
+    const namedColors = {
+        'black': '#000000',
+        'white': '#ffffff'
+    }
+    const normalizedColor = namedColors[color.toLowerCase()] || color
+
+    // Handle hex colors
+    if (normalizedColor.startsWith('#')) {
+        const hex = normalizedColor.slice(1)
+        let r, g, b
+        if (hex.length === 3) {
+            r = parseInt(hex[0] + hex[0], 16)
+            g = parseInt(hex[1] + hex[1], 16)
+            b = parseInt(hex[2] + hex[2], 16)
+        } else if (hex.length === 6) {
+            r = parseInt(hex.slice(0, 2), 16)
+            g = parseInt(hex.slice(2, 4), 16)
+            b = parseInt(hex.slice(4, 6), 16)
+        } else {
+            return color
+        }
+
+        // Calculate luminance to determine if color is dark
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+        // If color is very dark (like black), make it light
+        if (luminance < 0.15) {
+            return '#ffffff'
+        }
+        // If color is very light (like white), make it dark
+        if (luminance > 0.85) {
+            return '#121212'
+        }
+    }
+
+    return color
+}
+
+// Apply dark mode transformations to element colors
+const applyDarkModeToElement = (el) => {
+    return {
+        ...el,
+        strokeColor: invertColorForDarkMode(el.strokeColor),
+        backgroundColor: el.backgroundColor === 'transparent' ? 'transparent' : invertColorForDarkMode(el.backgroundColor)
+    }
+}
+
 const getDimensionsFromExcalidraw = json => {
     const defaultMargin = 10
     let maxWidth = 100
@@ -74,7 +129,7 @@ const getDimensionsFromExcalidraw = json => {
     }
 }
 
-export const convertExcalidrawToCanvas = async json => {
+export const convertExcalidrawToCanvas = async (json, options = {}) => {
     registerFont(__dirname + '/../fonts/FG_Virgil.ttf', { family: 'Virgil' })
     registerFont(__dirname + '/../fonts/Cascadia.ttf', { family: 'Cascadia' })
     const { maxDimensions, negativeDimensions } = getDimensionsFromExcalidraw(json)
@@ -83,15 +138,25 @@ export const convertExcalidrawToCanvas = async json => {
     const canvas = createCanvas(maxDimensions[0], maxDimensions[1])
     const rc = rough.canvas(canvas)
     const ctx = canvas.getContext("2d")
-    rc.rectangle( 0, 0, maxDimensions[0], maxDimensions[1], { 
-        fill: json.appState.viewBackgroundColor,
+
+    // Determine background color based on theme
+    const isDarkMode = options.theme === 'dark'
+    const backgroundColor = isDarkMode
+        ? DARK_BACKGROUND
+        : (json.appState?.viewBackgroundColor || LIGHT_BACKGROUND)
+
+    rc.rectangle( 0, 0, maxDimensions[0], maxDimensions[1], {
+        fill: backgroundColor,
         fillStyle: 'solid',
-        stroke: json.appState.viewBackgroundColor,
+        stroke: backgroundColor,
         roughness: 0
     })
     if (json && json.elements) {
         let elements = json.elements
-        elements.forEach(el => {
+        elements.forEach(originalEl => {
+            // Apply dark mode color transformations if needed
+            const el = isDarkMode ? applyDarkModeToElement(originalEl) : originalEl
+
             ctx.setLineDash([])
             ctx.textBaseline = 'middle'
             el.fill = el.backgroundColor
