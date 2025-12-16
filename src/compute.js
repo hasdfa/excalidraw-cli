@@ -19,7 +19,6 @@ const getFormatExtension = (format) => {
     const extensions = {
         'png': 'png',
         'jpeg': 'jpg',
-        'webp': 'webp'
     }
     return extensions[format] || 'png'
 }
@@ -28,14 +27,6 @@ const createCanvasStream = (canvas, format) => {
     switch (format) {
         case 'jpeg':
             return canvas.createJPEGStream({ quality: 0.95 })
-        case 'webp':
-            // node-canvas supports webp if built with libwebp
-            // Fall back to PNG if not supported
-            try {
-                return canvas.createPNGStream() // WebP not natively supported by node-canvas streams
-            } catch (e) {
-                return canvas.createPNGStream()
-            }
         case 'png':
         default:
             return canvas.createPNGStream()
@@ -58,7 +49,7 @@ const saveCanvasAsImage = async (canvas, pathArg, inputPath, inputFile, observer
             if (task) task.title = `${task.title} ${chalk.grey('=>')} ${chalk.yellow(outputFilePath)}`
         } else {
             const inputFileExt = path.extname(inputFile);
-            const outputFile = path.basename(inputFile,inputFileExt)
+            const outputFile = path.basename(inputFile, inputFileExt)
             const inputFileParentPath = path.dirname(inputFile)
             fs.mkdir(path.join(pathArg, inputFileParentPath.substring(inputPath.length)), { recursive: true }, (err) => {
                 if (err) throw err;

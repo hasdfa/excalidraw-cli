@@ -17,7 +17,7 @@ class ExcalidrawCli extends Command {
         format: flags.string({
             char: 'f',
             description: 'output image format',
-            options: ['png', 'jpeg', 'webp'],
+            options: ['png', 'jpeg'],
             default: 'png'
         })
     }
