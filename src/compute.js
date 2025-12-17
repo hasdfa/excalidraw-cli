@@ -15,24 +15,45 @@ const getStatsFromPathThatShouldExist = async path => {
     }
 }
 
-const saveCanvasAsPng = async (canvas, pathArg, inputPath, inputFile, observer, task) => {
+const getFormatExtension = (format) => {
+    const extensions = {
+        'png': 'png',
+        'jpeg': 'jpg',
+    }
+    return extensions[format] || 'png'
+}
+
+const createCanvasStream = (canvas, format) => {
+    switch (format) {
+        case 'jpeg':
+            return canvas.createJPEGStream({ quality: 0.95 })
+        case 'png':
+        default:
+            return canvas.createPNGStream()
+    }
+}
+
+const saveCanvasAsImage = async (canvas, pathArg, inputPath, inputFile, observer, task, options = {}) => {
+    const format = options.format || 'png'
+    const ext = getFormatExtension(format)
+
     try {
-        const stream = canvas.createPNGStream()
+        const stream = createCanvasStream(canvas, format)
         const outputPathExt = path.extname(pathArg)
         const outputFileName = path.basename(pathArg, outputPathExt)
         if (outputPathExt && outputPathExt.length > 0) {
-            let outputFilePath = path.join(path.dirname(pathArg), outputFileName + '.png')
+            let outputFilePath = path.join(path.dirname(pathArg), outputFileName + '.' + ext)
             let out = fs.createWriteStream(outputFilePath)
             stream.pipe(out)
             if (observer) observer.complete()
             if (task) task.title = `${task.title} ${chalk.grey('=>')} ${chalk.yellow(outputFilePath)}`
         } else {
             const inputFileExt = path.extname(inputFile);
-            const outputFile = path.basename(inputFile,inputFileExt)
+            const outputFile = path.basename(inputFile, inputFileExt)
             const inputFileParentPath = path.dirname(inputFile)
             fs.mkdir(path.join(pathArg, inputFileParentPath.substring(inputPath.length)), { recursive: true }, (err) => {
                 if (err) throw err;
-                let outputFilePath = path.join(pathArg, inputFileParentPath.substring(inputPath.length), outputFile + '.png')
+                let outputFilePath = path.join(pathArg, inputFileParentPath.substring(inputPath.length), outputFile + '.' + ext)
                 let out = fs.createWriteStream(outputFilePath)
                 stream.pipe(out)
                 if (observer) observer.complete()
@@ -44,21 +65,25 @@ const saveCanvasAsPng = async (canvas, pathArg, inputPath, inputFile, observer, 
     }
 }
 
-export const generateCanvasAndSaveAsPng = async (inputArg, inputPath, outputArg, observer, task) => {
+export const generateCanvasAndSaveAsImage = async (inputArg, inputPath, outputArg, observer, task, options = {}) => {
     try {
         const inputData = await retrieveDataFromExcalidraw(inputArg)
         if (inputData) {
-            const generatedCanvas = await convertExcalidrawToCanvas(inputData)
+            const generatedCanvas = await convertExcalidrawToCanvas(inputData, options)
             if (generatedCanvas) {
+                const formatName = (options.format || 'png').toUpperCase()
                 if (observer)
-                    observer.next('Generated canvas, saving it as PNG...')
-                saveCanvasAsPng(generatedCanvas, outputArg, inputPath, inputArg, observer, task)
+                    observer.next(`Generated canvas, saving it as ${formatName}...`)
+                saveCanvasAsImage(generatedCanvas, outputArg, inputPath, inputArg, observer, task, options)
             }
         }
     } catch (error) {
         if (observer) observer.error(error)
     }
 }
+
+// Backwards compatibility alias
+export const generateCanvasAndSaveAsPng = generateCanvasAndSaveAsImage
 
 export const retrieveDataFromExcalidraw = async path => {
     try {
@@ -85,6 +110,10 @@ export const computeUserInputs = async ({ args, flags }) => {
     args.input = args.input.replace(/\{cwd\}/g, process.cwd())
     args.output = args.output.replace(/\{cwd\}/g, process.cwd())
     const quiet = flags.quiet
+    const options = {
+        theme: flags.theme || 'light',
+        format: flags.format || 'png'
+    }
     if (args.input) {
         const inputLstat = await getStatsFromPathThatShouldExist(args.input)
         if (inputLstat && inputLstat.isDirectory()) {
@@ -96,7 +125,7 @@ export const computeUserInputs = async ({ args, flags }) => {
                 if (excalidrawFiles) {
                     if (excalidrawFiles.length == 0)
                         console.error(`Input directory <${chalk.yellow(args.input)}> has no '*.excalidraw' files.`)
-                    const tasks = generateTaskListFromFiles(excalidrawFiles, args.input, args.output, quiet)
+                    const tasks = generateTaskListFromFiles(excalidrawFiles, args.input, args.output, quiet, options)
                     tasks.run().catch(err => {
                         console.error(err)
                     })
@@ -104,7 +133,7 @@ export const computeUserInputs = async ({ args, flags }) => {
             }
         }
         else if (inputLstat && inputLstat.isFile()) {
-            const tasks = generateTaskListFromFile(args.input, args.output, quiet)
+            const tasks = generateTaskListFromFile(args.input, args.output, quiet, options)
             tasks.run().catch(err => {
                 console.error(err)
             })
