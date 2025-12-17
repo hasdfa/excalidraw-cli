@@ -1,6 +1,6 @@
 # excalidraw-cli
 
-[![npm version](https://img.shields.io/npm/v/@tommywalkie/excalidraw-cli)](https://www.npmjs.com/package/@tommywalkie/excalidraw-cli) [![Bundlephobia badge](https://badgen.net/bundlephobia/min/@tommywalkie/excalidraw-cli)](https://bundlephobia.com/result?p=@tommywalkie/excalidraw-cli@latest) ![build](https://github.com/tommywalkie/excalidraw-cli/workflows/build/badge.svg?branch=master)
+[![npm version](https://img.shields.io/npm/v/@vraksha/excalidraw-cli)](https://www.npmjs.com/package/@vraksha/excalidraw-cli) [![Bundlephobia badge](https://badgen.net/bundlephobia/min/@vraksha/excalidraw-cli)](https://bundlephobia.com/result?p=@vraksha/excalidraw-cli@latest) ![build](https://github.com/tommywalkie/excalidraw-cli/workflows/build/badge.svg?branch=master)
 
 Experimental Excalidraw CLI tool.
 
@@ -15,7 +15,7 @@ _Demo_ ⤴️
 ## Install
 
 ```bash
-npm install -g @tommywalkie/excalidraw-cli
+npm install -g @vraksha/excalidraw-cli
 ```
 
 ### Alpine
